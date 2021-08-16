@@ -46,6 +46,100 @@ int contains(char* array[], int size, char* str)
     return 0;
 }
 
+int compare_nodes(struct Node* n1, struct Node* n2, char* sort_option)
+{
+    int result;
+
+    if (strcmp(sort_option, SORT_OPT_SIZE) == 0)
+    {
+        result = n1->stat->st_size > n2->stat->st_size;
+    }
+    else if (strcmp(sort_option, SORT_OPT_ATIME) == 0)
+    {
+        result = n1->stat->st_atim.tv_nsec < n2->stat->st_atim.tv_nsec;
+    }
+    else if (strcmp(sort_option, SORT_OPT_CTIME) == 0)
+    {
+        result = n1->stat->st_ctim.tv_nsec < n2->stat->st_ctim.tv_nsec;
+    }
+    else if (strcmp(sort_option, SORT_OPT_MTIME) == 0)
+    {
+        result = n1->stat->st_mtim.tv_nsec < n2->stat->st_mtim.tv_nsec;
+    }
+    else if (strcmp(sort_option, SORT_OPT_NAME) == 0)
+    {
+        result = strcmp(n1->name, n2->name);
+    }
+    else
+    {
+        return -1;
+    }
+
+    return result;
+}
+
+void sort_list(struct Node* head, char* sort_option)
+{   
+    int swap;
+    struct Node* pCurrent;
+    struct Node* pLeft = NULL;
+
+    // do not sort empty list
+    if (!head)
+    {
+        return;
+    }
+
+    do
+    {
+        pCurrent = head;
+        swap = 0;
+
+        while (pCurrent->next != pLeft)
+        {
+            int compare_result = compare_nodes(pCurrent, pCurrent->next, sort_option);
+            if (compare_result > 0)
+            {
+                
+                // swap nodes
+
+                char* name = pCurrent->name;
+                struct stat* stat = pCurrent->stat;
+
+                pCurrent->name = (char *)malloc(sizeof(char) * strlen(pCurrent->next->name));
+                strcpy(pCurrent->name, pCurrent->next->name);
+                pCurrent->stat = pCurrent->next->stat;
+
+                pCurrent->next->name = (char *)malloc(sizeof(char) * strlen(name));
+                strcpy(pCurrent->next->name, name);
+                pCurrent->next->stat = stat;
+
+                swap++;
+            }
+            pCurrent = pCurrent->next;
+        }
+        pLeft = pCurrent;    
+    }
+    while (swap != 0);
+    
+}
+
+void reverse_list(struct Node** head)
+{
+    struct Node* pLast = NULL;
+    struct Node* pCurrent = *head;
+    struct Node* pNext = NULL;
+
+    while (pCurrent != NULL)
+    {
+        pNext = pCurrent->next;
+        pCurrent->next = pLast;
+        pLast = pCurrent;
+        pCurrent = pNext;
+    }
+    *head = pLast;
+}
+
 int main(int argc, char *argv[])
 {
     char *sort_options[NUM_SORT_OPTS] = { SORT_OPT_SIZE, SORT_OPT_ATIME, SORT_OPT_CTIME, SORT_OPT_MTIME, SORT_OPT_NAME };
@@ -105,13 +199,25 @@ int main(int argc, char *argv[])
         stat(file_path, pCurrent->stat);
     }
     pHead = pHead->next;
-    
-    // print entries
-    pCurrent = pHead;
-    while(pCurrent != NULL)
+
+    // sort linked list
+    sort_list(pHead, argv[2]);
+
+    // reverse list if descending order
+    if (strcmp(argv[3], SORT_DIR_DESC) == 0)
     {
-        printf("%s %ld\n",pCurrent->name, pCurrent->stat->st_size);
-        pCurrent = pCurrent->next;
+        reverse_list(&pHead);
+    }
+
+    // print entries
+    for (pCurrent = pHead; pCurrent != NULL; pCurrent = pCurrent->next)
+    {
+        printf("%s %ld %ld %ld %ld\n",
+                pCurrent->name,
+                pCurrent->stat->st_size,
+                pCurrent->stat->st_atim.tv_nsec,
+                pCurrent->stat->st_ctim.tv_nsec,
+                pCurrent->stat->st_mtim.tv_nsec);
     }
 
     // close directory and quit
