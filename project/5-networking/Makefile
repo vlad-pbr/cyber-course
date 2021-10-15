@@ -17,3 +17,6 @@ run: clean bin build_client build_server
 	./bin/server &
 	sleep 1
 	./bin/client localhost $(magic_string)
+
+capture:
+	sudo tcpdump -Xi lo udp port 4950
